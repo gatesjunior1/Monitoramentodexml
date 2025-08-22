@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monitor de XML • Novetech</title>
+  <style>
+    :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --ok:#16a34a; --warn:#ca8a04; --late:#dc2626; --miss:#475569; --brand:#2563eb; --card:#0b1225; --chip:#1f2937; --row:#0b1020; --shadow: 0 10px 30px rgba(0,0,0,.35); --radius: 18px; }
+    html,body{background:var(--bg);color:var(--text);font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";}
+    .wrap{max-width:1200px;margin:32px auto;padding:0 16px;}
+    header{display:grid;gap:14px;margin-bottom:18px}
+    .title{display:flex;gap:12px;align-items:center}
+    .badge{background:linear-gradient(135deg,#1d4ed8,#06b6d4);padding:6px 10px;border-radius:999px;font-weight:600;font-size:12px;letter-spacing:.3px}
+    h1{margin:0;font-size:22px;letter-spacing:.3px}
+    .panel{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .controls{display:grid;grid-template-columns: 1.3fr 1fr 1fr 1fr auto;gap:10px;padding:14px;border-bottom:1px solid #1f2937}
+    .controls .field{display:flex;flex-direction:column;gap:6px}
+    label{font-size:12px;color:var(--muted)}
+    input[type="text"],select,input[type="number"],button{background:#0b1225;border:1px solid #1f2937;color:var(--text);padding:10px 12px;border-radius:12px;outline:none}
+    .btn{cursor:pointer;transition:transform .05s ease,opacity .2s ease}
+    .btn:hover{opacity:.95}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:linear-gradient(135deg,#1d4ed8,#06b6d4);border:0;color:white;font-weight:700}
+    .btn.ghost{background:transparent;border:1px dashed #334155}
+    .legend{display:flex;gap:10px;align-items:center;padding:10px 14px}
+    .chip{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;background:var(--chip);color:#cbd5e1;font-size:12px}
+    .dot{width:10px;height:10px;border-radius:10px}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    thead th{position:sticky;top:0;background:linear-gradient(180deg,#0f172a 0%,#0b1225 100%);z-index:1}
+    th,td{padding:12px 14px;text-align:left;border-bottom:1px solid #1f2937}
+    tbody tr:nth-child(odd){background:var(--row)}
+    tbody tr:hover{background:#111933}
+    th{font-size:12px;color:#9aa7bd;text-transform:uppercase;letter-spacing:.05em}
+    td{font-size:14px}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-weight:600}
+    .ok{background:rgba(22,163,74,.18);color:#86efac;border:1px solid rgba(22,163,74,.3)}
+    .warn{background:rgba(202,138,4,.18);color:#fde68a;border:1px solid rgba(202,138,4,.35)}
+    .late{background:rgba(220,38,38,.18);color:#fecaca;border:1px solid rgba(220,38,38,.35)}
+    .miss{background:rgba(71,85,105,.35);color:#cbd5e1;border:1px solid rgba(71,85,105,.45)}
+    td[contenteditable="true"]{outline:0; border-radius:8px}
+    td[contenteditable="true"]:focus{background:#0d1a33;box-shadow:inset 0 0 0 1px #1d4ed8}
+    footer{color:var(--muted);font-size:12px;text-align:center;margin-top:16px}
+    .hidden{display:none}
+    @media (max-width: 880px){ .controls{grid-template-columns: 1fr 1fr 1fr;} .controls .wide{grid-column: 1 / -1} }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">
+      <span class="badge">NOVETECH</span>
+      <h1>Monitor de Recebimento de XML • Atenção Primária</h1>
+    </div>
+    <div class="panel">
+      <div class="controls">
+        <div class="field wide">
+          <label>Buscar (Município/UF)</label>
+          <input id="q" type="text" placeholder="Digite para filtrar…" />
+        </div>
+        <div class="field">
+          <label>Filtrar por UF</label>
+          <select id="ufFilter"><option value="">Todas</option></select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="statusFilter">
+            <option value="">Todos</option>
+            <option value="ok">OK (≤ dias bons)</option>
+            <option value="warn">Atenção (entre bons e críticos)</option>
+            <option value="late">Crítico (≥ dias críticos)</option>
+            <option value="miss">Sem envio/"x"</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Dias bons (≤)</label>
+          <input id="goodDays" type="number" min="1" value="14" />
+        </div>
+        <div class="field">
+          <label>Dias críticos (≥)</label>
+          <input id="criticalDays" type="number" min="7" value="30" />
+        </div>
+        <div class="field" style="align-self:end;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" id="btnImport">Importar CSV</button>
+          <input id="fileInput" class="hidden" type="file" accept=".csv" />
+          <button class="btn" id="btnExport">Exportar CSV</button>
+          <button class="btn primary" id="btnSave">Salvar (Local)</button>
+          <button class="btn ghost" id="btnReset">Restaurar Base</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="chip"><span class="dot" style="background:var(--ok)"></span> ≤ dias bons</span>
+        <span class="chip"><span class="dot" style="background:var(--warn)"></span> atenção</span>
+        <span class="chip"><span class="dot" style="background:var(--late)"></span> crítico</span>
+        <span class="chip"><span class="dot" style="background:var(--miss)"></span> sem envio / x</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="panel table-wrap">
+    <table id="grid">
+      <thead>
+        <tr>
+          <th data-key="municipio">Município</th>
+          <th data-key="uf">UF</th>
+          <th data-key="xml">DT. Recebeu XML</th>
+          <th data-key="atend">ATEND SAÚDE</th>
+          <th data-key="esus">e-SUS</th>
+          <th data-key="status">Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <footer>
+    Feito com ❤ pela Novetech. Edição inline habilitada – clique em qualquer célula para alterar e depois em <strong>Salvar (Local)</strong>.
+  </footer>
+</div>
+
+<script>
+  const state = { data: [], sortKey: 'municipio', sortDir: 'asc' };
+  const toTitle = s => s?.toString().trim();
+  function parseBRDate(str){ if(!str) return null; const s=(''+str).trim().toLowerCase(); if(s==='x'||s==='xx'||s==='na'||s==='n/a'||s==='-') return null; const m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/); if(!m) return null; let [_,d,mo,y]=m; y=y.length===2?('20'+y):y; const dt=new Date(+y,+mo-1,+d); return isNaN(dt)?null:dt; }
+  function daysSince(date){ if(!date) return Infinity; const ms=Date.now()-date.getTime(); return Math.floor(ms/86400000); }
+  function classify(date,good,crit){ if(!date) return 'miss'; const d=daysSince(date); if(d<=good) return 'ok'; if(d>=crit) return 'late'; return 'warn'; }
+  function worst(a,b,c){ const order={ok:0,warn:1,late:2,miss:3}; const arr=[a,b,c].filter(Boolean); return arr.sort((x,y)=>order[y]-order[x])[0]||'miss'; }
+  function fmtDate(d){ if(!d||d===Infinity) return ''; const dd=('0'+d.getDate()).slice(-2); const mm=('0'+(d.getMonth()+1)).slice(-2); const yy=d.getFullYear(); return `${dd}/${mm}/${yy}`; }
+
+  // ===== Base com dados enviados =====
+  const base = [
+    {municipio:'Açu', uf:'RN', xml:'13/08/2025', atend:'13/08/2025', esus:'13/08/2025'},
+    {municipio:'Alhandra', uf:'PB', xml:'14/08/2025', atend:'20/08/2025', esus:'20/08/2025'},
+    {municipio:'Alto do Rodrigues', uf:'RN', xml:'05/08/2025', atend:'06/08/2025', esus:'06/08/2025'},
+    {municipio:'Apodi', uf:'RN', xml:'11/08/2025', atend:'13/08/2025', esus:'13/08/2025'},
+    {municipio:'Araponga', uf:'MG', xml:'08/07/2025', atend:'10/07/2025', esus:'x'},
+    {municipio:'Areia', uf:'PB', xml:'06/06/2025', atend:'11/06/2025', esus:'11/06/2025'},
+    {municipio:'Brumado', uf:'BA', xml:'04/08/2025', atend:'05/08/2025', esus:'06/08/2025'},
+    {municipio:'Caldas Brandão', uf:'PB', xml:'13/08/2025', atend:'20/08/2025', esus:'20/08/2025'},
+    {municipio:'Canaã', uf:'MG', xml:'12/05/2025', atend:'15/05/2025', esus:'x'},
+    {municipio:'Conde', uf:'PB', xml:'30/07/2025', atend:'31/07/2025', esus:'31/07/2025'},
+    {municipio:'Cordeiro', uf:'RJ', xml:'28/07/2025', atend:'28/07/2025', esus:'28/07/2025'},
+    {municipio:'Franco da Rocha', uf:'SP', xml:'07/08/2025', atend:'08/08/2025', esus:'08/08/2025'},
+    {municipio:'Guarabira', uf:'PB', xml:'12/08/2025', atend:'13/08/2025', esus:'13/08/2025'},
+    {municipio:'Itabaiana', uf:'PB', xml:'16/12/2024', atend:'17/12/2024', esus:'15/07/2025'},
+    {municipio:'Itapororoca', uf:'PB', xml:'10/04/2025', atend:'10/04/2025', esus:'10/04/2025'},
+    {municipio:'Itatuba', uf:'PB', xml:'01/08/2025', atend:'05/08/2025', esus:'05/08/2025'},
+    {municipio:'Macaíba', uf:'RN', xml:'04/08/2025', atend:'05/08/2025', esus:'05/08/2025'},
+    {municipio:'Mogeiro', uf:'PB', xml:'12/08/2025', atend:'13/08/2025', esus:'13/08/2025'},
+    {municipio:'Patu', uf:'RN', xml:'11/06/2025', atend:'11/06/2025', esus:'11/06/2025'},
+    {municipio:'Paula Cândido', uf:'MG', xml:'22/07/2025', atend:'22/07/2025', esus:'x'},
+    {municipio:'Pedro Avelino', uf:'RN', xml:'25/02/2025', atend:'27/02/2025', esus:'27/02/2025'},
+    {municipio:'Pendências', uf:'RN', xml:'19/06/2025', atend:'19/06/2025', esus:'19/06/2025'},
+    {municipio:'Poço Branco', uf:'RN', xml:'22/08/2025', atend:'22/08/2025', esus:'22/08/2025'},
+    {municipio:'Santa Rita', uf:'PB', xml:'18/08/2025', atend:'21/08/2025', esus:'21/08/2025'},
+    {municipio:'São José de Ubá', uf:'RJ', xml:'12/02/2025', atend:'13/02/2025', esus:'13/02/2025'},
+    {municipio:'São Sebastião', uf:'AL', xml:'', atend:'x', esus:'16/10/2024'},
+    {municipio:'Tibau', uf:'RN', xml:'13/08/2025', atend:'20/08/2025', esus:'20/08/2025'},
+    {municipio:'Valença', uf:'RJ', xml:'22/07/2025', atend:'28/07/2025', esus:'x'},
+    {municipio:'Viçosa', uf:'MG', xml:'18/02/2025', atend:'19/02/2025', esus:'x'},
+    {municipio:'Trajano de Moraes', uf:'RJ', xml:'23/07/2025', atend:'28/07/2025', esus:'28/07/2025'},
+    {municipio:'Caaporã', uf:'PB', xml:'14/04/2025', atend:'17/04/2025', esus:'17/04/2025'},
+    {municipio:'Pitimbu', uf:'PB', xml:'18/08/2025', atend:'18/08/2025', esus:'18/08/2025'},
+  ];
+
+  function saveLocal(){ localStorage.setItem('novetech-monitor-xml', JSON.stringify(state.data)); }
+  function loadLocal(){ try{ const raw=localStorage.getItem('novetech-monitor-xml'); if(!raw) return null; return JSON.parse(raw);}catch(e){ return null } }
+  function toCSV(rows){ const head=['municipio','uf','xml','atend','esus']; const escape=v=>'"'+String(v??'').replace(/"/g,'""')+'"'; return [head.map(escape).join(','),...rows.map(r=>head.map(k=>escape(r[k]||'')).join(','))].join('\n'); }
+  function parseCSV(text){ const lines=text.trim().split(/\r?\n/); const head=lines.shift().split(',').map(s=>s.replace(/^"|"$/g,'')); const idx={ municipio:head.findIndex(h=>/munic/i.test(h)), uf:head.findIndex(h=>/^uf$/i.test(h)), xml:head.findIndex(h=>/xml/i.test(h)), atend:head.findIndex(h=>/atend/i.test(h)), esus:head.findIndex(h=>/esus/i.test(h)), }; return lines.map(l=>{ const cols=l.split(',').map(s=>s.replace(/^"|"$/g,'')); return { municipio:cols[idx.municipio]||'', uf:cols[idx.uf]||'', xml:cols[idx.xml]||'', atend:cols[idx.atend]||'', esus:cols[idx.esus]||'', }; }); }
+  function buildUFOptions(){ const ufs=[...new Set(state.data.map(r=>r.uf).filter(Boolean))].sort(); const sel=document.getElementById('ufFilter'); sel.innerHTML='<option value="">Todas</option>'+ufs.map(u=>`<option value="${u}">${u}</option>`).join(''); }
+  function render(){ const good=+document.getElementById('goodDays').value||14; const crit=+document.getElementById('criticalDays').value||30; const q=document.getElementById('q').value.trim().toLowerCase(); const uf=document.getElementById('ufFilter').value; const sf=document.getElementById('statusFilter').value; let rows=state.data.slice(); rows.sort((a,b)=>{ const k=state.sortKey; const dir=state.sortDir==='asc'?1:-1; if(['xml','atend','esus'].includes(k)){ const da=parseBRDate(a[k]); const db=parseBRDate(b[k]); return ((da||0)-(db||0))*dir; } return (''+(a[k]??'')).localeCompare(''+(b[k]??''))*dir; }); rows=rows.filter(r=>{ const text=(r.municipio+' '+r.uf).toLowerCase(); if(q && !text.includes(q)) return false; if(uf && r.uf!==uf) return false; const cx=classify(parseBRDate(r.xml),good,crit); const ca=classify(parseBRDate(r.atend),good,crit); const ce=classify(parseBRDate(r.esus),good,crit); const worstC=worst(cx,ca,ce); if(sf && worstC!==sf) return false; return true; }); const tb=document.querySelector('#grid tbody'); tb.innerHTML=''; for(const r of rows){ const dx=parseBRDate(r.xml), da=parseBRDate(r.atend), de=parseBRDate(r.esus); const good=+document.getElementById('goodDays').value||14; const crit=+document.getElementById('criticalDays').value||30; const cx=classify(dx,good,crit), ca=classify(da,good,crit), ce=classify(de,good,crit); const status=worst(cx,ca,ce); const tr=document.createElement('tr'); tr.innerHTML=`
+        <td contenteditable="true" data-k="municipio">${r.municipio||''}</td>
+        <td contenteditable="true" data-k="uf" style="width:60px">${r.uf||''}</td>
+        <td contenteditable="true" data-k="xml" class="${cx}">${r.xml||''}</td>
+        <td contenteditable="true" data-k="atend" class="${ca}">${r.atend||''}</td>
+        <td contenteditable="true" data-k="esus" class="${ce}">${r.esus||''}</td>
+        <td><span class="pill ${status}">${status.toUpperCase()}</span></td>
+        <td><button class="btn" data-action="clear">Limpar</button></td>`; tr.querySelector('[data-action="clear"]').addEventListener('click',()=>{ r.xml=''; r.atend=''; r.esus=''; render(); }); tr.querySelectorAll('[contenteditable]').forEach(td=> td.addEventListener('blur', ()=>{ const k=td.dataset.k; r[k]=td.textContent.trim(); render(); })); tb.appendChild(tr); }
+    buildUFOptions(); }
+  document.querySelectorAll('#q,#ufFilter,#statusFilter,#goodDays,#criticalDays').forEach(el=>{ el.addEventListener('input', render); el.addEventListener('change', render); });
+  document.querySelectorAll('th[data-key]').forEach(th=>{ th.style.cursor='pointer'; th.addEventListener('click', ()=>{ const k=th.dataset.key; if(state.sortKey===k){ state.sortDir=state.sortDir==='asc'?'desc':'asc'; } else { state.sortKey=k; state.sortDir='asc'; } render(); }) });
+  document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('fileInput').click());
+  document.getElementById('fileInput').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(!f) return; const reader=new FileReader(); reader.onload=()=>{ state.data=parseCSV(reader.result); render(); }; reader.readAsText(f,'utf-8'); e.target.value=''; });
+  document.getElementById('btnExport').addEventListener('click', ()=>{ const csv=toCSV(state.data); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='monitor-xml-novetech.csv'; document.body.appendChild(a); a.click(); a.remove(); });
+  document.getElementById('btnSave').addEventListener('click', ()=>{ localStorage.setItem('novetech-monitor-xml', JSON.stringify(state.data)); alert('Dados salvos neste navegador.'); });
+  document.getElementById('btnReset').addEventListener('click', ()=>{ if(confirm('Restaurar a base de exemplo?')){ state.data=JSON.parse(JSON.stringify(base)); localStorage.setItem('novetech-monitor-xml', JSON.stringify(state.data)); render(); }});
+  (function init(){ const saved=localStorage.getItem('novetech-monitor-xml'); if(saved){ try{ state.data=JSON.parse(saved)||base; }catch(_){ state.data=[...base]; } } else { state.data=[...base]; } render(); })();
+</script>
+</body>
+</html>
